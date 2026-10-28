@@ -36,25 +36,29 @@ const af=$('#application-form');if(af)af.onsubmit=async e=>{
  finally{if(submit){submit.disabled=false;submit.textContent='আবেদন জমা দিন ও Student ID তৈরি করুন'}}
 };
 
-// Student portal: Student ID + registered phone. Photo is stored as a bounded data URL in the student's application row.
+// Student portal: remember login on this device after the first successful ID + registered-phone check.
 const lf=$('#student-login-form');
-if(lf)lf.addEventListener('submit',async e=>{
- e.preventDefault();
- const st=$('#login-status'),btn=lf.querySelector('[type="submit"]');
+async function studentPortalLogin(studentId,phone,remember=true,automatic=false){
+ const st=$('#login-status'),btn=lf?.querySelector('[type="submit"]');
  if(!db){status(st,'Supabase সংযোগ তৈরি হয়নি। config.js ও Supabase CDN যাচাই করুন।',true);return}
- const studentId=$('#student-id')?.value?.trim(),phone=$('#student-phone')?.value?.trim();
  if(!studentId||!phone){status(st,'Student ID ও মোবাইল নম্বর লিখুন।',true);return}
- if(btn){btn.disabled=true;btn.textContent='যাচাই হচ্ছে…'}
+ if(btn){btn.disabled=true;btn.textContent=automatic?'আগের লগইন যাচাই হচ্ছে…':'যাচাই হচ্ছে…'}
  try{
-   const {data,error}=await db.rpc('student_portal_lookup',{p_student_id:studentId,p_phone:phone});
-   if(error)throw error;
-   const student=Array.isArray(data)?data[0]:data;
-   if(!student){status(st,'Student ID ও মোবাইল নম্বর মেলেনি, অথবা আবেদন অনুমোদিত হয়নি।',true);return}
-   renderStudentPortal(student,studentId,phone);
-   status(st,'লগইন সফল হয়েছে।');
- }catch(err){status(st,'Student Login করা যায়নি: '+(err?.message||'Supabase SQL setup যাচাই করুন।'),true)}
- finally{if(btn){btn.disabled=false;btn.textContent='Student ID দিয়ে প্রবেশ করুন'}}
-});
+  const {data,error}=await db.rpc('student_portal_lookup',{p_student_id:studentId,p_phone:phone});
+  if(error)throw error;
+  const student=Array.isArray(data)?data[0]:data;
+  if(!student){localStorage.removeItem('kazi_student_login');if(lf)lf.classList.remove('hidden');status(st,'Student ID ও মোবাইল নম্বর মেলেনি, অথবা আবেদন অনুমোদিত হয়নি।',true);return}
+  if(remember)localStorage.setItem('kazi_student_login',JSON.stringify({studentId,phone}));
+  if(lf)lf.classList.add('hidden');
+  renderStudentPortal(student,studentId,phone);
+  status(st,automatic?'আগের লগইন থেকে প্রবেশ করা হয়েছে।':'লগইন সফল হয়েছে।');
+ }catch(err){if(lf)lf.classList.remove('hidden');status(st,'Student Login করা যায়নি: '+(err?.message||'Supabase SQL setup যাচাই করুন।'),true)}
+ finally{if(btn){btn.disabled=false;btn.textContent='আমার অ্যাকাউন্টে প্রবেশ করুন'}}
+}
+if(lf){
+ lf.addEventListener('submit',e=>{e.preventDefault();studentPortalLogin($('#student-id')?.value?.trim(),$('#student-phone')?.value?.trim(),true,false)});
+ try{const saved=JSON.parse(localStorage.getItem('kazi_student_login')||'null');if(saved?.studentId&&saved?.phone)studentPortalLogin(saved.studentId,saved.phone,true,true)}catch(_){localStorage.removeItem('kazi_student_login')}
+}
 function renderStudentPortal(student,studentId,phone){
  const box=$('#student-dashboard');if(!box)return;
  box.classList.remove('hidden');
@@ -75,7 +79,7 @@ function renderStudentPortal(student,studentId,phone){
    }catch(err){status(photoStatus,'ছবি আপলোড হয়নি: '+(err.message||'Supabase SQL setup চালানো হয়েছে কি না যাচাই করুন।'),true)}
    finally{uploadBtn.disabled=false;uploadBtn.textContent='ছবি আপলোড / পরিবর্তন করুন'}
  });
- $('#student-logout').onclick=()=>{box.classList.add('hidden');box.innerHTML='';lf.reset();status($('#login-status'),'আপনি লগআউট করেছেন।')};
+ $('#student-logout').onclick=()=>{localStorage.removeItem('kazi_student_login');box.classList.add('hidden');box.innerHTML='';if(lf){lf.reset();lf.classList.remove('hidden')}status($('#login-status'),'আপনি লগআউট করেছেন।')};
  (async()=>{
    const {data:siteRows}=await db.from('site_content').select('key,value').in('key',['online_class_url']);
    const siteMap=Object.fromEntries((siteRows||[]).map(x=>[x.key,x.value]));
