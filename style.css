@@ -12,3 +12,12 @@
 #public-banners{grid-template-columns:minmax(0,1fr);}
 .site-banner{height:auto;min-height:0;}
 .site-banner img{width:100%;height:auto;max-height:none;object-fit:contain;object-position:center;background:#f5f7fc;}
+
+
+/* Banner layout: compact full image on the left, description beside it. */
+.public-banner-section{padding:12px 0;}
+#public-banners{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;}
+.site-banner{display:grid;grid-template-columns:minmax(0,2fr) minmax(180px,1fr);align-items:center;gap:16px;min-height:0;height:auto;padding:10px 14px;background:#fff;}
+.site-banner img{width:100%;height:145px;max-height:145px;object-fit:contain;object-position:center;background:#f5f7fc;border-radius:10px;}
+.site-banner span{position:static;display:block;align-self:center;padding:12px 14px;background:#f3f6fc;color:var(--navy);border-left:3px solid var(--blue);border-radius:0 10px 10px 0;font-weight:700;line-height:1.6;overflow-wrap:anywhere;}
+@media(max-width:600px){.site-banner{grid-template-columns:minmax(0,1fr);gap:8px;padding:10px;}.site-banner img{height:130px;max-height:130px;}.site-banner span{padding:8px 10px;}}
