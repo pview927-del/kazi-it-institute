@@ -190,18 +190,36 @@ async function loadOnlineClassEditor(){const input=$('#online-class-url');if(!in
 $('#online-class-form')?.addEventListener('submit',async e=>{e.preventDefault();try{await saveSiteValue('online_class_url',$('#online-class-url').value.trim());status($('#admin-panel-status'),'অনলাইন ক্লাসের লিংক সেভ হয়েছে।')}catch(err){status($('#admin-panel-status'),'লিংক সেভ হয়নি: '+err.message,true)}});
 $('#make-admin-qr')?.addEventListener('click',()=>{const id=$('#qr-student-id')?.value?.trim(),host=$('#admin-qr-result');if(!host)return;if(!id){host.textContent='Student ID লিখুন।';return}host.innerHTML='<div id="admin-qr-canvas"></div><p>'+esc(id)+'</p><button class="btn outline" id="download-admin-qr" type="button">QR ডাউনলোড</button>';new QRCode(host.querySelector('#admin-qr-canvas'),{text:id,width:220,height:220});host.querySelector('#download-admin-qr').onclick=()=>{const im=host.querySelector('img'),cv=host.querySelector('canvas'),url=im?.src||cv?.toDataURL();if(url){const link=document.createElement('a');link.href=url;link.download='student-id-qr.png';link.click()}}});
 async function loadApproachEditor(){
- const host=$('#approach-content-fields');if(!host||!db)return;
- const fields=[1,2,3,4].flatMap(i=>[['approach_'+i+'_title','বাটন '+i+' — ইংরেজি শিরোনাম'],['approach_'+i+'_desc','বাটন '+i+' — বাংলা বর্ণনা'],['approach_'+i+'_url','বাটন '+i+' — আলাদা লিংক (URL)']]);
+ const host=$('#approach-content-fields');if(!host)return;
+ if(!db){host.innerHTML='<p class="status error">Supabase সংযোগ পাওয়া যায়নি। config.js পরীক্ষা করুন।</p>';return}
  const {data,error}=await db.from('site_content').select('key,value');
  if(error){host.innerHTML='<p class="status error">বাটনের তথ্য লোড হয়নি: '+esc(error.message)+'</p>';return}
  const values=Object.fromEntries((data||[]).map(x=>[x.key,x.value]));
- host.innerHTML=[1,2,3,4].map(i=>'<div class="field full" style="padding:14px;background:#f5f7fc;border-radius:12px"><h4 style="margin:0 0 10px">বাটন '+i+'</h4><div class="fields"><label class="field"><span>ইংরেজি শিরোনাম</span><input name="approach_'+i+'_title" required value="'+esc(values['approach_'+i+'_title']||(i===1?'Clear Lessons':i===2?'Practical Tasks':i===3?'Skill Development':'Guided Learning'))+'"></label><label class="field"><span>বাংলা বর্ণনা</span><input name="approach_'+i+'_desc" required value="'+esc(values['approach_'+i+'_desc']||(i===1?'সহজ ব্যাখ্যা':i===2?'বাস্তব অনুশীলন':i===3?'দক্ষতা উন্নয়ন':'ধাপে ধাপে শেখা'))+'"></label><label class="field full"><span>লিংক URL</span><input name="approach_'+i+'_url" type="url" placeholder="https://... অথবা about.html" value="'+esc(values['approach_'+i+'_url']||'')+'"></label></div></div>').join('');
+ host.innerHTML=[1,2,3,4].map(i=>{
+  const defaults={1:['Clear Lessons','সহজ ব্যাখ্যা'],2:['Practical Tasks','বাস্তব অনুশীলন'],3:['Skill Development','দক্ষতা উন্নয়ন'],4:['Guided Learning','ধাপে ধাপে শেখা']}[i];
+  return '<div class="field full" style="padding:14px;background:#f5f7fc;border-radius:12px"><h4 style="margin:0 0 10px">বাটন '+i+'</h4><div class="fields"><label class="field"><span>ইংরেজি শিরোনাম</span><input name="approach_'+i+'_title" required value="'+esc(values['approach_'+i+'_title']||defaults[0])+'"></label><label class="field"><span>বাংলা বর্ণনা</span><input name="approach_'+i+'_desc" required value="'+esc(values['approach_'+i+'_desc']||defaults[1])+'"></label><label class="field full"><span>লিংক (যেমন about.html বা https://example.com)</span><input name="approach_'+i+'_url" type="text" placeholder="about.html অথবা https://..." value="'+esc(values['approach_'+i+'_url']||'')+'"></label></div></div>';
+ }).join('');
 }
-$('#approach-content-form')?.addEventListener('submit',async e=>{e.preventDefault();const st=$('#admin-panel-status');try{const rows=[...new FormData(e.target)].map(([key,value])=>({key,value:String(value).trim(),updated_at:new Date().toISOString()}));const {error}=await db.from('site_content').upsert(rows,{onConflict:'key'});if(error)throw error;status(st,'OUR APPROACH-এর ৪টি বাটনের লেখা ও লিংক সেভ হয়েছে। হোমপেজ রিফ্রেশ করে দেখুন।');await loadApproachEditor()}catch(err){status(st,'বাটন সেভ হয়নি: '+err.message,true)}});
+$('#approach-content-form')?.addEventListener('submit',async e=>{
+ e.preventDefault();const st=$('#admin-panel-status'),btn=e.submitter;
+ try{
+  if(!db)throw new Error('Supabase সংযোগ পাওয়া যায়নি।');
+  const rows=[...new FormData(e.target)].map(([key,value])=>({key,value:String(value).trim(),updated_at:new Date().toISOString()}));
+  for(const row of rows){const {error}=await db.from('site_content').upsert(row,{onConflict:'key'});if(error)throw new Error(row.key+': '+error.message)}
+  status(st,'সফল! চারটি বাটনের লেখা ও লিংক সেভ হয়েছে। এখন হোমপেজে Ctrl + F5 চাপুন।');
+  await loadApproachEditor();
+ }catch(err){status(st,'সেভ করা যায়নি: '+(err?.message||'অজানা সমস্যা')+'। Supabase-এর site_content UPDATE/INSERT policy পরীক্ষা করতে হতে পারে।',true)}
+});
 async function loadApproachLinks(){
- if(!db)return;const {data,error}=await db.from('site_content').select('key,value').like('key','approach_%_url');if(error)return;
+ if(!db)return;
+ const {data,error}=await db.from('site_content').select('key,value');
+ if(error){console.error('OUR APPROACH links load failed:',error.message);return}
  const values=Object.fromEntries((data||[]).map(x=>[x.key,x.value]));
- document.querySelectorAll('[data-approach-link]').forEach(a=>{const url=String(values['approach_'+a.dataset.approachLink+'_url']||'').trim();a.href=url||'#';a.style.cursor=url?'pointer':'default';a.setAttribute('aria-disabled',url?'false':'true');if(!url)a.onclick=e=>e.preventDefault();else a.onclick=null;});
+ document.querySelectorAll('[data-approach-link]').forEach(a=>{
+  const url=String(values['approach_'+a.dataset.approachLink+'_url']||'').trim();
+  a.href=url||'#';a.style.cursor=url?'pointer':'default';a.setAttribute('aria-disabled',url?'false':'true');
+  a.onclick=url?null:(e=>e.preventDefault());
+ });
 }
 async function loadHomeEditor(){
   const host=$('#home-content-fields');if(!host)return;
