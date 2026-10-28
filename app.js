@@ -65,9 +65,32 @@ async function renderStudentPortal(user){
 }
 if(db)db.auth.getSession().then(({data})=>{if(data.session&&$('#student-login-form'))renderStudentPortal(data.session.user)});
 
-// Render database-managed courses on the public courses page while keeping existing course pages intact.
-async function loadPublicCourses(){const host=$('#public-courses');if(!db)return;const {data,error}=await db.from('courses').select('*').eq('active',true).order('created_at',{ascending:false});if(error||!data?.length)return;if(host)host.insertAdjacentHTML('beforeend',data.map(c=>'<article class="course-card"><div class="course-icon">▤</div><h3>'+esc(c.title_bn||c.title)+'</h3><p>'+esc(c.description||'কোর্সের বিস্তারিত জানতে যোগাযোগ করুন।')+'</p><div class="tags"><span class="tag">'+esc(c.fee)+'</span><span class="tag">'+esc(c.duration)+'</span></div><p class="small">'+esc(c.conditions||'')+'</p><a class="link" href="apply.html?course='+encodeURIComponent(c.slug)+'">এই কোর্সে ভর্তি →</a></article>').join(''));const select=$('#course');if(select){const requested=new URLSearchParams(location.search).get('course');data.forEach(c=>{if(![...select.options].some(o=>o.value===c.title)){const op=document.createElement('option');op.value=c.title;op.textContent=c.title_bn||c.title;select.appendChild(op)}});const chosen=data.find(c=>c.slug===requested);if(chosen)select.value=chosen.title}}
+// Only show courses that the admin has added in Supabase. Both pages use the same data.
+async function loadPublicCourses(){
+ const hosts=[$('#public-courses'),$('#homepage-courses')].filter(Boolean);
+ if(!hosts.length)return;
+ if(!db){hosts.forEach(h=>h.innerHTML='<p class="muted">কোর্স দেখতে ইন্টারনেট সংযোগ প্রয়োজন।</p>');return}
+ const {data,error}=await db.from('courses').select('*').eq('active',true).order('created_at',{ascending:false});
+ if(error){hosts.forEach(h=>h.innerHTML='<p class="muted">কোর্স লোড করা যায়নি। পরে আবার চেষ্টা করুন।</p>');return}
+ const cards=(data||[]).map(c=>'<article class="course-card course-card-clickable"><div class="course-icon">▤</div><h3>'+esc(c.title_bn||c.title)+'</h3><p>'+esc(c.description||'কোর্সের বিস্তারিত জানতে ক্লিক করুন।')+'</p><div class="tags"><span class="tag">'+esc(c.fee||'ফি জানতে যোগাযোগ করুন')+'</span><span class="tag">'+esc(c.duration||'সময়কাল জানতে যোগাযোগ করুন')+'</span></div><a class="link" href="course-details.html?slug='+encodeURIComponent(c.slug)+'">বিস্তারিত দেখুন →</a></article>').join('');
+ hosts.forEach(h=>h.innerHTML=cards||'<p class="muted">এখনো কোনো কোর্স যোগ করা হয়নি। নতুন কোর্স শিগগিরই প্রকাশ করা হবে।</p>');
+ const select=$('#course');
+ if(select){const requested=new URLSearchParams(location.search).get('course');(data||[]).forEach(c=>{if(![...select.options].some(o=>o.value===c.title)){const op=document.createElement('option');op.value=c.title;op.textContent=c.title_bn||c.title;select.appendChild(op)}});const chosen=(data||[]).find(c=>c.slug===requested);if(chosen)select.value=chosen.title}
+}
 loadPublicCourses();
+
+// Admin-added course details page. The slug resolves the selected database course.
+async function loadCourseDetails(){
+ const host=$('#course-detail-content');if(!host)return;
+ const slug=new URLSearchParams(location.search).get('slug');
+ if(!slug){host.innerHTML='<p class="muted">কোনো কোর্স নির্বাচন করা হয়নি। <a href="courses.html">সব কোর্স দেখুন</a></p>';return}
+ if(!db){host.innerHTML='<p class="muted">কোর্সের তথ্য লোড করতে Supabase সংযোগ প্রয়োজন।</p>';return}
+ const {data:c,error}=await db.from('courses').select('*').eq('slug',slug).eq('active',true).maybeSingle();
+ if(error||!c){host.innerHTML='<div class="card"><h2>কোর্সটি পাওয়া যায়নি</h2><p>কোর্সটি মুছে ফেলা হয়েছে অথবা এখন প্রকাশিত নেই।</p><a class="btn" href="courses.html">সব কোর্স দেখুন</a></div>';return}
+ document.title=(c.title_bn||c.title)+' | KAZI IT AND INSTITUTE';
+ host.innerHTML='<div class="card course-detail-card"><div class="kicker">COURSE DETAILS</div><h1>'+esc(c.title_bn||c.title)+'</h1><p class="course-detail-lead">'+esc(c.description||'এই কোর্সে ব্যবহারিক দক্ষতা শেখানো হবে। বিস্তারিত জানতে প্রতিষ্ঠানে যোগাযোগ করুন।')+'</p><div class="course-detail-facts"><div><small>কোর্স ফি</small><b>'+esc(c.fee||'অফিসে যোগাযোগ করুন')+'</b></div><div><small>সময়কাল</small><b>'+esc(c.duration||'অফিসে যোগাযোগ করুন')+'</b></div></div><h2>কোর্স সম্পর্কে বিস্তারিত</h2><p>'+esc(c.description||'কোর্সের বিস্তারিত তথ্য জানতে প্রতিষ্ঠানের সঙ্গে যোগাযোগ করুন।')+'</p><h3>ভর্তির শর্ত ও প্রয়োজনীয় তথ্য</h3><p>'+esc(c.conditions||'ভর্তি, ক্লাসের সময় ও অন্যান্য শর্ত জানতে প্রতিষ্ঠানে সরাসরি যোগাযোগ করুন।')+'</p><div class="actions"><a class="btn" href="apply.html?course='+encodeURIComponent(c.slug)+'">এই কোর্সে ভর্তি আবেদন</a><a class="btn outline" href="https://wa.me/'+wa+'?text='+encodeURIComponent('KAZI IT AND INSTITUTE - '+(c.title_bn||c.title)+' কোর্স সম্পর্কে জানতে চাই।')+'">বিস্তারিত জানতে যোগাযোগ</a></div></div>';
+}
+loadCourseDetails();
 
 // Public banner carousel; target_url is the click-through destination.
 async function loadBanners(){const host=$('#public-banners');if(!host||!db)return;const {data:pins,error:pinErr}=await db.from('photo_album').select('*').eq('active',true).eq('pinned',true).order('created_at',{ascending:false}).limit(2);if(!pinErr&&pins?.length){host.innerHTML=pins.map(b=>'<a class="site-banner" href="'+esc(b.target_url||'about.html')+'"><img src="'+esc(b.image_url)+'" alt="'+esc(b.title||'প্রতিষ্ঠানের ছবি')+'"><span>'+esc(b.title)+'</span></a>').join('');return}const {data,error}=await db.from('banners').select('*').eq('active',true).order('created_at',{ascending:false}).limit(10);if(error||!data?.length)return;host.innerHTML=data.map(b=>'<a class="site-banner" href="'+esc(b.target_url)+'" target="_blank" rel="noopener"><img src="'+esc(b.image_url)+'" alt="'+esc(b.title||'প্রচার ব্যানার')+'"><span>'+esc(b.title)+'</span></a>').join('')}
