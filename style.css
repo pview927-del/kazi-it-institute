@@ -65,3 +65,11 @@
 #public-banners .site-banner img{display:block;width:100%;height:clamp(130px,18vw,220px);max-height:none;object-fit:contain;object-position:center;background:#f5f7fc;border-radius:14px;}
 #public-banners .site-banner span{display:block;margin-top:8px;padding:8px 10px;background:#f3f6fc;color:var(--navy);border:0;border-radius:10px;font-size:14px;line-height:1.5;}
 @media(max-width:600px){.public-banner-section .wrap#public-banners{width:calc(100% - 24px);grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}#public-banners .site-banner{padding:6px;border-radius:14px;}#public-banners .site-banner img{height:clamp(90px,27vw,140px);border-radius:10px;}#public-banners .site-banner span{font-size:12px;padding:6px;}}
+
+
+/* Oval/goal-shaped banner cards: keep the full image visible inside the shape. */
+.public-banner-section .wrap#public-banners{display:grid;width:min(1160px,calc(100% - 34px));max-width:1160px;margin:0 auto;padding:0;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
+#public-banners .site-banner{display:flex;flex-direction:column;align-items:stretch;justify-content:center;min-width:0;width:100%;margin:0;padding:16px 22px 12px;border:1px solid var(--line);border-radius:50% / 22%;box-shadow:var(--shadow);background:#fff;overflow:hidden;}
+#public-banners .site-banner img{display:block;width:100%;height:clamp(130px,18vw,220px);max-height:none;object-fit:contain;object-position:center;background:transparent;border-radius:50% / 18%;}
+#public-banners .site-banner span{display:block;margin-top:6px;padding:8px 10px;background:transparent;color:var(--navy);text-align:center;border:0;border-radius:0;font-size:14px;line-height:1.5;}
+@media(max-width:600px){.public-banner-section .wrap#public-banners{width:calc(100% - 16px);grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;}#public-banners .site-banner{padding:10px 8px 8px;border-radius:50% / 18%;}#public-banners .site-banner img{height:clamp(85px,25vw,130px);}#public-banners .site-banner span{font-size:11px;padding:5px 2px;}}
