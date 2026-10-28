@@ -102,7 +102,6 @@ const login=$('#admin-login-form');if(login){
  login.onsubmit=async e=>{
   e.preventDefault();if(!db){status(st,'Supabase সংযোগ নেই।',true);return}
   const {data,error}=await db.auth.signInWithPassword({email:$('#admin-email').value,password:$('#admin-password').value});if(error){status(st,'লগইন হয়নি: '+error.message,true);return}
-  const {data:ok,error:ce}=await db.rpc('verify_kazi_admin_code',{p_code:$('#admin-code').value});if(ce||ok!==true){await db.auth.signOut();status(st,'নিরাপত্তা কোড সঠিক নয়।',true);return}
   const {data:prof,error:pe}=await db.from('profiles').select('role').eq('id',data.user.id).single();if(pe||prof?.role!=='admin'){await db.auth.signOut();status(st,'এই অ্যাকাউন্টে Admin permission নেই।',true);return}
   area.classList.add('hidden');panel.classList.remove('hidden');st=$('#admin-panel-status');await loadAdmin();
  };
