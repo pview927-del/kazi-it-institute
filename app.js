@@ -44,13 +44,16 @@ const af=$('#application-form');if(af)af.onsubmit=async e=>{
 };
 
 // Student portal: email/password account, profile photo, personal notices.
-const lf=$('#student-login-form');if(lf)lf.onsubmit=async e=>{
- e.preventDefault();const st=$('#login-status');if(!db){status(st,'Supabase সেটআপ প্রয়োজন।',true);return}
+const lf=$('#student-login-form');if(lf)lf.addEventListener('submit',async e=>{
+ e.preventDefault();const st=$('#login-status'),btn=lf.querySelector('[type="submit"]');
+ if(!db){status(st,'Supabase সংযোগ তৈরি হয়নি। পেজ রিফ্রেশ করুন; config.js ও Supabase CDN যাচাই করতে হবে।',true);return}
  const email=$('#student-email')?.value?.trim(),password=$('#student-password')?.value;
  if(!email||!password){status(st,'ইমেইল ও পাসওয়ার্ড লিখুন।',true);return}
- const {data,error}=await db.auth.signInWithPassword({email,password});if(error){status(st,'লগইন হয়নি: '+error.message,true);return}
- await renderStudentPortal(data.user);
-};
+ if(btn){btn.disabled=true;btn.textContent='লগইন হচ্ছে…'}
+ try{const {data,error}=await db.auth.signInWithPassword({email,password});if(error)throw error;await renderStudentPortal(data.user)}
+ catch(err){status(st,'Student Login ব্যর্থ: '+(err?.message||'অজানা সমস্যা')+'. ইমেইল, পাসওয়ার্ড ও Supabase account যাচাই করুন।',true)}
+ finally{if(btn){btn.disabled=false;btn.textContent='আমার অ্যাকাউন্টে প্রবেশ করুন'}}
+});
 async function renderStudentPortal(user){
  const st=$('#login-status');if(!db||!user)return;
  const {data:p,error}=await db.from('profiles').select('*').eq('id',user.id).single();
@@ -105,12 +108,21 @@ loadBanners();
 // Admin dashboard
 const login=$('#admin-login-form');if(login){
  const area=$('#admin-login-area'),panel=$('#admin-panel');let st=$('#admin-login-status');
- login.onsubmit=async e=>{
-  e.preventDefault();if(!db){status(st,'Supabase সংযোগ নেই।',true);return}
-  const {data,error}=await db.auth.signInWithPassword({email:$('#admin-email').value,password:$('#admin-password').value});if(error){status(st,'লগইন হয়নি: '+error.message,true);return}
-  const {data:prof,error:pe}=await db.from('profiles').select('role').eq('id',data.user.id).single();if(pe||prof?.role!=='admin'){await db.auth.signOut();status(st,'এই অ্যাকাউন্টে Admin permission নেই।',true);return}
-  area.classList.add('hidden');panel.classList.remove('hidden');st=$('#admin-panel-status');await loadAdmin();
- };
+ login.addEventListener('submit',async e=>{
+  e.preventDefault();const btn=login.querySelector('[type="submit"]');
+  if(!db){status(st,'Supabase সংযোগ তৈরি হয়নি। পেজ রিফ্রেশ করুন; config.js ও Supabase CDN যাচাই করতে হবে।',true);return}
+  const email=$('#admin-email')?.value?.trim(),password=$('#admin-password')?.value;
+  if(!email||!password){status(st,'অ্যাডমিন ইমেইল ও পাসওয়ার্ড লিখুন।',true);return}
+  if(btn){btn.disabled=true;btn.textContent='লগইন হচ্ছে…'}
+  try{
+   const {data,error}=await db.auth.signInWithPassword({email,password});if(error)throw error;
+   const {data:prof,error:pe}=await db.from('profiles').select('role').eq('id',data.user.id).single();
+   if(pe)throw new Error('লগইন হয়েছে, কিন্তু Admin অনুমতি যাচাই করা যায়নি: '+pe.message);
+   if(prof?.role!=='admin'){await db.auth.signOut();throw new Error('এই অ্যাকাউন্টে Admin permission নেই। Supabase profiles টেবিলে role = admin সেট করতে হবে।')}
+   area.classList.add('hidden');panel.classList.remove('hidden');st=$('#admin-panel-status');await loadAdmin();
+  }catch(err){status(st,'Admin Login ব্যর্থ: '+(err?.message||'অজানা সমস্যা'),true)}
+  finally{if(btn){btn.disabled=false;btn.textContent='নিরাপদে লগইন করুন'}}
+ });
  async function loadAdmin(){const section=new URLSearchParams(location.search).get('section');const map={students:'admin-applications',courses:'course-admin-section',notices:'notice-admin-section',banners:'banner-admin-section',album:'album-admin-section',homepage:'home-content-admin-section',branding:'branding-admin-section',about:'about-content-admin-section',online:'online-class-admin-section'};if(section&&map[section])document.querySelectorAll('#admin-panel .admin-main>section').forEach(el=>el.classList.toggle('hidden',el.id!==map[section]));await Promise.all([loadApplications(),loadAdminNotices(),loadCourses(),loadAdminBanners(),loadHomeEditor(),loadAdminAlbum(),loadLogoEditor(),loadAboutEditor(),loadOnlineClassEditor()])}
  async function loadApplications(){
   const host=$('#admin-applications');if(!host)return;
