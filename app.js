@@ -210,4 +210,38 @@ async function loadPublicAlbum(){const host=$('#public-album');if(!host||!db)ret
 const createdId=new URLSearchParams(location.search).get('id');if(createdId&&$('#profile-page-id')){$('#profile-page-id').textContent=createdId;$('#copy-created-id')?.addEventListener('click',()=>navigator.clipboard.writeText(createdId))}
 const publicNotices=$('#public-notices');if(publicNotices&&db)db.from('notices').select('title,body,created_at').is('student_id',null).eq('active',true).order('created_at',{ascending:false}).then(({data})=>{if(data?.length)publicNotices.innerHTML=data.map(n=>'<article class="notice-item"><small>'+new Date(n.created_at).toLocaleDateString('bn-BD')+'</small><h3>'+esc(n.title)+'</h3><p>'+esc(n.body)+'</p></article>').join('')});
 const branchCards=$$('.branch-card');branchCards.forEach((el,i)=>{const b=C.BRANCHES?.[i];if(b){const name=el.querySelector('[data-branch-name]'),addr=el.querySelector('[data-branch-address]'),map=el.querySelector('iframe');if(name)name.textContent=b.name;if(addr)addr.textContent=b.address;if(map)map.src='https://maps.google.com/maps?q='+encodeURIComponent(b.mapQuery)+'&output=embed'}});
+
+/* Premium inline graphic icons: replace emoji characters with clean SVG line icons. */
+const iconPaths={
+ menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
+ sparkles:'<path d="m12 3 1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2L12 3Z"/><path d="m19 14 1.1 2.9L23 18l-2.9 1.1L19 22l-1.1-2.9L15 18l2.9-1.1L19 14Z"/>',
+ book:'<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5.5v16M8 7h8M8 11h8"/>',
+ monitor:'<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
+ palette:'<path d="M12 3a9 9 0 1 0 0 18h1.2a2 2 0 0 0 1.5-3.3 1.8 1.8 0 0 1 1.4-3H18a3 3 0 0 0 3-3c0-4.8-4-8.7-9-8.7Z"/><path d="M7.5 10h.01M10 7.5h.01M14 7.5h.01M16.5 10h.01"/>',
+ globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/>',
+ users:'<path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+ bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
+ pin:'<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',
+ file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/>',
+ check:'<circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/>',
+ arrow:'<path d="M7 17 17 7M7 7h10v10"/>'
+};
+const svgIcon=(name,cls='graphic-icon')=>'<svg class="'+cls+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(iconPaths[name]||iconPaths.sparkles)+'</svg>';
+const emojiIconName=ch=>{const n=ch.codePointAt(0);if(n>=0x1F4DA&&n<=0x1F4F0)return 'book';if(n>=0x1F4BB&&n<=0x1F4EF)return 'monitor';if(n>=0x1F3A8&&n<=0x1F3AD)return 'palette';if(n>=0x1F30D&&n<=0x1F320)return 'globe';if(n>=0x1F465&&n<=0x1F487)return 'users';if(n>=0x1F514&&n<=0x1F51B)return 'bell';if(n>=0x1F4CD&&n<=0x1F4CE)return 'pin';if(n>=0x1F4C4&&n<=0x1F4C8)return 'file';if(n>=0x1F680&&n<=0x1F6FF)return 'arrow';return 'sparkles'};
+function replaceEmojiWithIcons(root=document.body){
+ if(!root)return;
+ const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode(node){if(!node.nodeValue||!/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(node.nodeValue))return NodeFilter.FILTER_REJECT;const p=node.parentElement;if(!p||p.closest('script,style,textarea,input,code,pre,svg,.graphic-icon'))return NodeFilter.FILTER_REJECT;return NodeFilter.FILTER_ACCEPT}});
+ const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+ const re=/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/gu;
+ nodes.forEach(node=>{const text=node.nodeValue;const frag=document.createDocumentFragment();let last=0,m;re.lastIndex=0;while((m=re.exec(text))){frag.append(document.createTextNode(text.slice(last,m.index)));const holder=document.createElement('span');holder.innerHTML=svgIcon(emojiIconName(m[0]));frag.append(holder.firstChild);last=m.index+m[0].length}frag.append(document.createTextNode(text.slice(last)));node.replaceWith(frag)});
+}
+function setupGraphicIcons(){
+ const menuButton=document.querySelector('#menu');
+ if(menuButton&&menuButton.textContent.trim()==='☰'){menuButton.textContent='';menuButton.insertAdjacentHTML('afterbegin',svgIcon('menu'))}
+ replaceEmojiWithIcons();
+ document.querySelectorAll('.check').forEach((el,i)=>{if(!el.querySelector('.check-graphic-icon')){const names=['check','book','monitor','globe','users','pin'];el.insertAdjacentHTML('afterbegin',svgIcon(names[i%names.length],'graphic-icon check-graphic-icon'))}});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setupGraphicIcons,{once:true});else setupGraphicIcons();
+new MutationObserver(()=>replaceEmojiWithIcons()).observe(document.body,{childList:true,subtree:true,characterData:true});
+
 })();
