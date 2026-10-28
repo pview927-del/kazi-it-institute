@@ -1,6 +1,6 @@
 -- KAZI IT AND INSTITUTE: Student profile photo upload
 -- Run this file in Supabase Dashboard -> SQL Editor.
--- This keeps the existing Student ID + phone login. Photos are stored as small data URLs
+-- This keeps the existing Student ID + phone login. Photos up to 5 MB are stored as data URLs
 -- in the matching application row, avoiding a public Storage upload bucket.
 -- Limitation: ID + phone is not strong authentication; use OTP before storing highly sensitive data.
 
@@ -47,7 +47,7 @@ begin
   if p_student_id is null or length(trim(p_student_id)) < 3
      or p_phone is null or length(regexp_replace(p_phone, '[^0-9]', '', 'g')) < 10
      or p_photo_data is null
-     or length(p_photo_data) > 1400000
+     or length(p_photo_data) > 7000000
      or p_photo_data !~ '^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$' then
     return false;
   end if;
