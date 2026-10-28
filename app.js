@@ -212,6 +212,9 @@ const profileParams=new URLSearchParams(location.search);
 if($('#profile-page-id')&&profileParams.get('admin')==='1'){
  const form=$('#student-login-form'),host=$('#student-dashboard'),id=profileParams.get('id')?.trim();
  if(form)form.classList.add('hidden');
+ const pageTitle=document.querySelector('.page-hero h1'),pageIntro=document.querySelector('.page-hero p');
+ if(pageTitle)pageTitle.textContent='শিক্ষার্থীর অ্যাকাউন্ট';
+ if(pageIntro)pageIntro.textContent='Admin Panel থেকে Student ID দিয়ে শিক্ষার্থীর তথ্য দেখা হচ্ছে।';
  if(host){host.classList.remove('hidden');host.innerHTML='<p class="muted">Admin session যাচাই হচ্ছে…</p>'}
  (async()=>{
   if(!db||!id){if(host)host.innerHTML='<p class="status error">Student ID পাওয়া যায়নি। Admin Panel থেকে আবার খুলুন।</p>';return}
