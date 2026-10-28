@@ -43,7 +43,7 @@ const af=$('#application-form');if(af)af.onsubmit=async e=>{
  finally{if(submit){submit.disabled=false;submit.textContent='আবেদন জমা দিন'}}
 };
 
-// Student portal: login with Student ID + registered mobile number (no email/password).
+// Student portal: Student ID + registered phone. Photo is stored as a bounded data URL in the student's application row.
 const lf=$('#student-login-form');
 if(lf)lf.addEventListener('submit',async e=>{
  e.preventDefault();
@@ -56,17 +56,32 @@ if(lf)lf.addEventListener('submit',async e=>{
    const {data,error}=await db.rpc('student_portal_lookup',{p_student_id:studentId,p_phone:phone});
    if(error)throw error;
    const student=Array.isArray(data)?data[0]:data;
-   if(!student){status(st,'Student ID ও মোবাইল নম্বর মেলেনি, অথবা আবেদন এখনো অনুমোদিত হয়নি। তথ্য যাচাই করে আবার চেষ্টা করুন।',true);return}
-   renderStudentPortal(student);
+   if(!student){status(st,'Student ID ও মোবাইল নম্বর মেলেনি, অথবা আবেদন অনুমোদিত হয়নি।',true);return}
+   renderStudentPortal(student,studentId,phone);
    status(st,'লগইন সফল হয়েছে।');
- }catch(err){status(st,'Student Login করা যায়নি: '+(err?.message||'Supabase সংযোগ বা student_portal_lookup function যাচাই করুন।'),true)}
+ }catch(err){status(st,'Student Login করা যায়নি: '+(err?.message||'Supabase SQL setup যাচাই করুন।'),true)}
  finally{if(btn){btn.disabled=false;btn.textContent='Student ID দিয়ে প্রবেশ করুন'}}
 });
-function renderStudentPortal(student){
- const box=$('#student-dashboard');
- if(!box)return;
+function renderStudentPortal(student,studentId,phone){
+ const box=$('#student-dashboard');if(!box)return;
  box.classList.remove('hidden');
- box.innerHTML='<div class="card"><h2>'+esc(student.full_name||'শিক্ষার্থী')+'</h2><p>Student ID: <b>'+esc(student.student_id||'—')+'</b></p><p>কোর্স: '+esc(student.course||'—')+'</p><p>শাখা: '+esc(student.branch||'—')+'</p><p>আবেদনের অবস্থা: <b>'+esc(student.status||'—')+'</b></p><p class="note">এই পোর্টালে প্রবেশের জন্য Student ID এবং ভর্তি আবেদনে দেওয়া মোবাইল নম্বর ব্যবহার করুন।</p><h3>অনলাইন ক্লাস</h3><div id="student-online-class" class="notice-box">লিংক লোড হচ্ছে…</div><h3 style="margin-top:20px">সর্বশেষ নোটিশ</h3><div id="student-notices">নোটিশ লোড হচ্ছে…</div><button class="btn outline" id="student-logout" type="button" style="margin-top:16px">লগআউট</button></div>';
+ const photo=typeof student.profile_photo_data==='string'&&student.profile_photo_data.startsWith('data:image/')?student.profile_photo_data:'';
+ box.innerHTML='<div class="card"><div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:18px"><img id="student-own-photo" src="'+(photo?esc(photo):'')+'" alt="প্রোফাইল ছবি" style="width:104px;height:104px;object-fit:cover;border-radius:50%;border:2px solid #dbe5f5;'+(photo?'':'display:none')+'"><div><h2>'+esc(student.full_name||'শিক্ষার্থী')+'</h2><p>Student ID: <b>'+esc(student.student_id||'—')+'</b></p></div></div><section class="notice-item"><h3>নিজের প্রোফাইল ছবি</h3><p>JPG, PNG বা WebP; সর্বোচ্চ ১ MB।</p><form id="student-photo-form"><input id="student-photo-file" type="file" accept="image/jpeg,image/png,image/webp" required><button class="btn" type="submit" style="margin-top:10px">ছবি আপলোড / পরিবর্তন করুন</button></form><div id="student-photo-status" class="status hidden" role="status"></div></section><p>কোর্স: '+esc(student.course||'—')+'</p><p>শাখা: '+esc(student.branch||'—')+'</p><p>আবেদনের অবস্থা: <b>'+esc(student.status||'—')+'</b></p><p class="note">এই পোর্টালটি Student ID ও ভর্তি আবেদনে দেওয়া মোবাইল নম্বর দিয়ে যাচাই করে।</p><h3>অনলাইন ক্লাস</h3><div id="student-online-class" class="notice-box">লিংক লোড হচ্ছে…</div><h3 style="margin-top:20px">সর্বশেষ নোটিশ</h3><div id="student-notices">নোটিশ লোড হচ্ছে…</div><button class="btn outline" id="student-logout" type="button" style="margin-top:16px">লগআউট</button></div>';
+ $('#student-photo-form')?.addEventListener('submit',async e=>{
+   e.preventDefault();const file=$('#student-photo-file')?.files?.[0],photoStatus=$('#student-photo-status'),uploadBtn=e.target.querySelector('[type="submit"]');
+   if(!file)return;
+   if(!['image/jpeg','image/png','image/webp'].includes(file.type)){status(photoStatus,'শুধু JPG, PNG বা WebP ছবি দিন।',true);return}
+   if(file.size>1024*1024){status(photoStatus,'ছবির সাইজ সর্বোচ্চ ১ MB হতে পারবে। ছোট ছবি নির্বাচন করুন।',true);return}
+   uploadBtn.disabled=true;uploadBtn.textContent='আপলোড হচ্ছে…';
+   try{
+     const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('ছবি পড়া যায়নি।'));reader.readAsDataURL(file)});
+     const {data,error}=await db.rpc('student_portal_save_photo',{p_student_id:studentId,p_phone:phone,p_photo_data:dataUrl});
+     if(error)throw error;if(data!==true)throw new Error('Student ID/মোবাইল যাচাই হয়নি অথবা আবেদন অনুমোদিত নয়।');
+     const img=$('#student-own-photo');if(img){img.src=dataUrl;img.style.display='block'}
+     status(photoStatus,'প্রোফাইল ছবি সফলভাবে আপলোড হয়েছে।');
+   }catch(err){status(photoStatus,'ছবি আপলোড হয়নি: '+(err.message||'Supabase SQL setup চালানো হয়েছে কি না যাচাই করুন।'),true)}
+   finally{uploadBtn.disabled=false;uploadBtn.textContent='ছবি আপলোড / পরিবর্তন করুন'}
+ });
  $('#student-logout').onclick=()=>{box.classList.add('hidden');box.innerHTML='';lf.reset();status($('#login-status'),'আপনি লগআউট করেছেন।')};
  (async()=>{
    const {data:siteRows}=await db.from('site_content').select('key,value').in('key',['online_class_url']);
