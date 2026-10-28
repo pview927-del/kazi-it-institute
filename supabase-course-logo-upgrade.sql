@@ -13,3 +13,7 @@ drop policy if exists "admins update site assets" on storage.objects;
 create policy "admins update site assets" on storage.objects for update to authenticated using(bucket_id='site-assets' and public.is_kazi_admin()) with check(bucket_id='site-assets' and public.is_kazi_admin());
 drop policy if exists "admins delete site assets" on storage.objects;
 create policy "admins delete site assets" on storage.objects for delete to authenticated using(bucket_id='site-assets' and public.is_kazi_admin());
+
+-- Permit Admin to block/unblock student applications.
+alter table public.applications drop constraint if exists applications_status_check;
+alter table public.applications add constraint applications_status_check check (status in ('pending','approved','rejected','blocked'));
