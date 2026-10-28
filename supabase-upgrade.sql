@@ -147,3 +147,41 @@ grant insert, update, delete on public.banners to authenticated;
 grant select, insert, update, delete on public.profiles to authenticated;
 grant select, insert, update, delete on public.applications to authenticated;
 grant select, insert, update, delete on public.notices, public.courses to authenticated;
+
+-- Safe public admission RPC: returns only the new Student ID, not a table of student data.
+create or replace function public.submit_kazi_application(
+  p_full_name text,
+  p_phone text,
+  p_father_name text,
+  p_mother_name text,
+  p_email text,
+  p_occupation text,
+  p_age integer,
+  p_gender text,
+  p_address text,
+  p_course text,
+  p_branch text
+)
+returns table(student_id text)
+language plpgsql
+security definer
+set search_path=public,auth
+as $$
+declare matched_user uuid; generated_id text;
+begin
+  if length(trim(coalesce(p_full_name,'')))<2 or length(regexp_replace(coalesce(p_phone,''),'[^0-9]','','g'))<10 then
+    raise exception 'নাম ও সঠিক মোবাইল নম্বর দিন';
+  end if;
+  if p_age is null or p_age<5 or p_age>100 then raise exception 'সঠিক বয়স দিন'; end if;
+  select u.id into matched_user from auth.users u where lower(u.email)=lower(trim(p_email)) limit 1;
+  if matched_user is not null then
+    select p.student_id into generated_id from public.profiles p where p.id=matched_user;
+  end if;
+  if generated_id is null then generated_id:=public.kazi_new_student_id(); end if;
+  insert into public.applications(full_name,phone,father_name,mother_name,occupation,age,gender,address,course,branch,status,student_id,profile_id)
+  values(trim(p_full_name),trim(p_phone),trim(p_father_name),trim(p_mother_name),trim(p_occupation),p_age,trim(p_gender),trim(p_address),trim(p_course),trim(p_branch),'approved',generated_id,matched_user);
+  return query select generated_id;
+end;
+$$;
+revoke all on function public.submit_kazi_application(text,text,text,text,text,text,integer,text,text,text,text) from public;
+grant execute on function public.submit_kazi_application(text,text,text,text,text,text,integer,text,text,text,text) to anon,authenticated;
