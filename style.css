@@ -38,3 +38,13 @@
 .site-banner img{width:100%;height:clamp(100px,22vw,240px);max-height:none;object-fit:contain;}
 .site-banner span{font-size:clamp(12px,1.4vw,15px);}
 @media(max-width:600px){.site-banner img{height:clamp(90px,32vw,160px);}}
+
+
+/* Banner stretches across the full laptop/desktop content width. */
+.public-banner-section{width:100%;padding:10px 0;}
+.public-banner-section .wrap{width:100%;max-width:none;margin:0;padding-left:0;padding-right:0;}
+#public-banners{width:100%;max-width:none;grid-template-columns:minmax(0,1fr);justify-content:stretch;gap:0;}
+.site-banner{width:100%;max-width:none;margin:0;border-radius:0;padding:8px 0;box-shadow:none;}
+.site-banner img{width:100%;height:clamp(130px,28vw,320px);max-height:none;object-fit:contain;border-radius:0;}
+.site-banner span{padding:8px 16px;}
+@media(max-width:720px){.public-banner-section .wrap{padding-left:0;padding-right:0;}.site-banner img{height:clamp(100px,34vw,190px);}}
