@@ -215,15 +215,20 @@ $('#approach-content-form')?.addEventListener('submit',async e=>{
  }catch(err){status(st,'সেভ করা যায়নি: '+(err?.message||'অজানা সমস্যা')+'। Supabase-এর site_content UPDATE/INSERT policy পরীক্ষা করতে হতে পারে।',true)}
 });
 async function loadApproachLinks(){
- if(!db)return;
- const {data,error}=await db.from('site_content').select('key,value');
- if(error){console.error('OUR APPROACH links load failed:',error.message);return}
- const values=Object.fromEntries((data||[]).map(x=>[x.key,x.value]));
- document.querySelectorAll('[data-approach-link]').forEach(a=>{
-  const url=String(values['approach_'+a.dataset.approachLink+'_url']||'').trim();
-  a.href=url||'#';a.style.cursor=url?'pointer':'default';a.setAttribute('aria-disabled',url?'false':'true');
-  a.onclick=url?null:(e=>e.preventDefault());
+ const links=[...document.querySelectorAll('[data-approach-link]')];if(!links.length)return;
+ const apply=(values)=>links.forEach(a=>{
+  let raw=String(values['approach_'+a.dataset.approachLink+'_url']||'').trim();
+  a.removeAttribute('target');a.removeAttribute('rel');
+  if(!raw){a.href='#';a.setAttribute('aria-disabled','true');a.onclick=e=>e.preventDefault();return}
+  let url=raw;
+  if(!/^(https?:\/\/|mailto:|tel:|\/|#)/i.test(url))url=url.replace(/^\/+/, '');
+  a.href=url;a.setAttribute('aria-disabled','false');a.style.cursor='pointer';a.onclick=null;
+  if(/^https?:\/\//i.test(url)){a.target='_blank';a.rel='noopener noreferrer';}
  });
+ if(!db){console.warn('OUR APPROACH: Supabase is not configured');return}
+ const {data,error}=await db.from('site_content').select('key,value');
+ if(error){console.error('OUR APPROACH link load error:',error.message);return}
+ apply(Object.fromEntries((data||[]).map(x=>[x.key,x.value])));
 }
 async function loadHomeEditor(){
   const host=$('#home-content-fields');if(!host)return;
