@@ -123,6 +123,21 @@ const login=$('#admin-login-form');if(login){
   }catch(err){status(st,'Admin Login ব্যর্থ: '+(err?.message||'অজানা সমস্যা'),true)}
   finally{if(btn){btn.disabled=false;btn.textContent='নিরাপদে লগইন করুন'}}
  });
+ // Restore the existing Supabase admin session when a dashboard section link reloads admin.html.
+ // Without this check, every section link returns the visitor to the login form.
+ if(db){
+  db.auth.getSession().then(async ({data,error})=>{
+   if(error||!data?.session)return;
+   try{
+    const {data:prof,error:pe}=await db.from('profiles').select('role').eq('id',data.session.user.id).single();
+    if(pe||prof?.role!=='admin')return;
+    area.classList.add('hidden');
+    panel.classList.remove('hidden');
+    st=$('#admin-panel-status');
+    await loadAdmin();
+   }catch(err){console.error('Admin session restore failed:',err)}
+  });
+ }
  async function loadAdmin(){const section=new URLSearchParams(location.search).get('section');const map={students:'admin-applications',courses:'course-admin-section',notices:'notice-admin-section',banners:'banner-admin-section',album:'album-admin-section',homepage:'home-content-admin-section',branding:'branding-admin-section',about:'about-content-admin-section',online:'online-class-admin-section'};if(section&&map[section])document.querySelectorAll('#admin-panel .admin-main>section').forEach(el=>el.classList.toggle('hidden',el.id!==map[section]));await Promise.all([loadApplications(),loadAdminNotices(),loadCourses(),loadAdminBanners(),loadHomeEditor(),loadAdminAlbum(),loadLogoEditor(),loadAboutEditor(),loadOnlineClassEditor()])}
  async function loadApplications(){
   const host=$('#admin-applications');if(!host)return;
