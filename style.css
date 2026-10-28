@@ -56,3 +56,12 @@
 #public-banners .site-banner{display:block;width:100%;max-width:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;background:#fff;overflow:hidden;}
 #public-banners .site-banner img{display:block;width:100%;height:auto;max-height:none;object-fit:contain;object-position:center;background:#fff;border-radius:0;}
 #public-banners .site-banner span{display:block;padding:8px 16px;background:#f3f6fc;color:var(--navy);border:0;border-radius:0;font-size:14px;}
+
+
+/* Two side-by-side banners inside rounded cards. */
+.public-banner-section{padding:16px 0;background:#f5f7fc;}
+.public-banner-section .wrap#public-banners{display:grid;width:min(1160px,calc(100% - 34px));max-width:1160px;margin:0 auto;padding:0;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
+#public-banners .site-banner{display:flex;flex-direction:column;min-width:0;width:100%;margin:0;padding:10px;border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);background:#fff;overflow:hidden;}
+#public-banners .site-banner img{display:block;width:100%;height:clamp(130px,18vw,220px);max-height:none;object-fit:contain;object-position:center;background:#f5f7fc;border-radius:14px;}
+#public-banners .site-banner span{display:block;margin-top:8px;padding:8px 10px;background:#f3f6fc;color:var(--navy);border:0;border-radius:10px;font-size:14px;line-height:1.5;}
+@media(max-width:600px){.public-banner-section .wrap#public-banners{width:calc(100% - 24px);grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}#public-banners .site-banner{padding:6px;border-radius:14px;}#public-banners .site-banner img{height:clamp(90px,27vw,140px);border-radius:10px;}#public-banners .site-banner span{font-size:12px;padding:6px;}}
