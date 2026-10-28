@@ -1,0 +1,19 @@
+{
+  "name": "KAZI IT AND INSTITUTE",
+  "short_name": "KAZI IT",
+  "description": "KAZI IT AND INSTITUTE official website and student portal",
+  "start_url": "./home.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f6f8fc",
+  "theme_color": "#101b35",
+  "icons": [
+    {
+      "src": "app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
