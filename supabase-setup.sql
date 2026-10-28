@@ -119,6 +119,39 @@ grant select, update, delete on public.applications to authenticated;
 grant select, insert, update, delete on public.notices, public.courses to authenticated;
 grant select on public.profiles to authenticated;
 
+-- Student Portal full profile lookup.
+-- Run this block in Supabase Dashboard -> SQL Editor.
+-- Login requires Student ID + the phone number supplied with the admission application.
+create or replace function public.student_portal_lookup(p_student_id text, p_phone text)
+returns table(
+  full_name text,
+  phone text,
+  occupation text,
+  age integer,
+  gender text,
+  address text,
+  course text,
+  branch text,
+  status text,
+  student_id text,
+  created_at timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public
+as $
+  select a.full_name, a.phone, a.occupation, a.age, a.gender, a.address,
+         a.course, a.branch, a.status, a.student_id, a.created_at
+  from public.applications a
+  where a.student_id = trim(p_student_id)
+    and regexp_replace(a.phone, '[^0-9]', '', 'g') = regexp_replace(trim(p_phone), '[^0-9]', '', 'g')
+    and a.status = 'approved'
+  limit 1;
+$;
+revoke all on function public.student_portal_lookup(text,text) from public;
+grant execute on function public.student_portal_lookup(text,text) to anon, authenticated;
+
 -- SET UP FIRST ADMIN:
 -- 1) Supabase Dashboard -> Authentication -> Users -> Add user (email + strong password).
 -- 2) Copy that user's UUID.
