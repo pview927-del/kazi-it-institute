@@ -43,37 +43,41 @@ const af=$('#application-form');if(af)af.onsubmit=async e=>{
  finally{if(submit){submit.disabled=false;submit.textContent='আবেদন জমা দিন'}}
 };
 
-// Student portal: email/password account, profile photo, personal notices.
-const lf=$('#student-login-form');if(lf)lf.addEventListener('submit',async e=>{
- e.preventDefault();const st=$('#login-status'),btn=lf.querySelector('[type="submit"]');
- if(!db){status(st,'Supabase সংযোগ তৈরি হয়নি। পেজ রিফ্রেশ করুন; config.js ও Supabase CDN যাচাই করতে হবে।',true);return}
- const email=$('#student-email')?.value?.trim(),password=$('#student-password')?.value;
- if(!email||!password){status(st,'ইমেইল ও পাসওয়ার্ড লিখুন।',true);return}
- if(btn){btn.disabled=true;btn.textContent='লগইন হচ্ছে…'}
- try{const {data,error}=await db.auth.signInWithPassword({email,password});if(error)throw error;await renderStudentPortal(data.user)}
- catch(err){status(st,'Student Login ব্যর্থ: '+(err?.message||'অজানা সমস্যা')+'. ইমেইল, পাসওয়ার্ড ও Supabase account যাচাই করুন।',true)}
- finally{if(btn){btn.disabled=false;btn.textContent='আমার অ্যাকাউন্টে প্রবেশ করুন'}}
+// Student portal: login with Student ID + registered mobile number (no email/password).
+const lf=$('#student-login-form');
+if(lf)lf.addEventListener('submit',async e=>{
+ e.preventDefault();
+ const st=$('#login-status'),btn=lf.querySelector('[type="submit"]');
+ if(!db){status(st,'Supabase সংযোগ তৈরি হয়নি। config.js ও Supabase CDN যাচাই করুন।',true);return}
+ const studentId=$('#student-id')?.value?.trim(),phone=$('#student-phone')?.value?.trim();
+ if(!studentId||!phone){status(st,'Student ID ও মোবাইল নম্বর লিখুন।',true);return}
+ if(btn){btn.disabled=true;btn.textContent='যাচাই হচ্ছে…'}
+ try{
+   const {data,error}=await db.rpc('student_portal_lookup',{p_student_id:studentId,p_phone:phone});
+   if(error)throw error;
+   const student=Array.isArray(data)?data[0]:data;
+   if(!student){status(st,'Student ID ও মোবাইল নম্বর মেলেনি, অথবা আবেদন এখনো অনুমোদিত হয়নি। তথ্য যাচাই করে আবার চেষ্টা করুন।',true);return}
+   renderStudentPortal(student);
+   status(st,'লগইন সফল হয়েছে।');
+ }catch(err){status(st,'Student Login করা যায়নি: '+(err?.message||'Supabase সংযোগ বা student_portal_lookup function যাচাই করুন।'),true)}
+ finally{if(btn){btn.disabled=false;btn.textContent='Student ID দিয়ে প্রবেশ করুন'}}
 });
-async function renderStudentPortal(user){
- const st=$('#login-status');if(!db||!user)return;
- const {data:p,error}=await db.from('profiles').select('*').eq('id',user.id).single();
- if(error){status(st,'প্রোফাইল লোড হয়নি: '+error.message,true);return}
- const {data:appRow}=await db.from('applications').select('status').eq('profile_id',user.id).maybeSingle();
- if(appRow?.status==='blocked'){await db.auth.signOut();status(st,'আপনার Student Portal অ্যাক্সেস Admin বন্ধ করেছেন। প্রতিষ্ঠানের সঙ্গে যোগাযোগ করুন।',true);return}
- let box=$('#student-dashboard');if(!box){box=document.createElement('section');box.id='student-dashboard';box.className='card';$('#student-login-form').after(box)}box.classList.remove('hidden');
- box.innerHTML='<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><img id="student-photo-preview" src="'+esc(p.profile_photo_url||'https://placehold.co/96x96?text=Student')+'" alt="Profile photo" class="profile-avatar"><div><h2>'+esc(p.full_name||user.email)+'</h2><p>Student ID: <b>'+esc(p.student_id||'ID তৈরি হচ্ছে')+'</b></p><button class="btn outline" id="copy-own-id" type="button">ID কপি</button><p id="student-id-reminder" class="note">আপনি Student ID টি অবশ্যই কপি করে রাখুন বা screenshot নিয়ে রাখুন, না হলে আপনি ভবিষ্যতে আপনার ID টা login করতে পারবেন না।</p></div></div><hr><label>প্রোফাইল ছবি আপলোড <input id="student-photo" type="file" accept="image/png,image/jpeg,image/webp"></label><div id="photo-status" class="status hidden"></div><h3 style="margin-top:20px">আমার তথ্য</h3><div class="admin-table-wrap"><table class="admin-table"><tbody><tr><th>ইমেইল</th><td>'+esc(user.email)+'</td></tr><tr><th>মোবাইল</th><td>'+esc(p.phone||'—')+'</td></tr><tr><th>পিতার নাম</th><td>'+esc(p.father_name||'—')+'</td></tr><tr><th>মাতার নাম</th><td>'+esc(p.mother_name||'—')+'</td></tr><tr><th>কোর্স</th><td>'+esc(p.course||'—')+'</td></tr><tr><th>শাখা</th><td>'+esc(p.branch||'—')+'</td></tr><tr><th>যোগদানের তারিখ</th><td>'+new Date(p.joined_at||p.created_at||Date.now()).toLocaleDateString('bn-BD')+'</td></tr></tbody></table></div><h3 style="margin-top:20px">অনলাইন ক্লাস</h3><div id="student-online-class" class="notice-box">অনলাইন ক্লাসের লিংক লোড হচ্ছে…</div><h3 style="margin-top:20px">আমার নোটিশ</h3><div id="student-notices">লোড হচ্ছে…</div><button class="btn outline" id="student-logout" type="button" style="margin-top:16px">লগআউট</button>';
- $('#copy-own-id').onclick=()=>navigator.clipboard.writeText(p.student_id||'');
- $('#student-logout').onclick=async()=>{await db.auth.signOut();box.remove();status(st,'আপনি লগআউট করেছেন।')};
- $('#student-photo').onchange=async ev=>{const f=ev.target.files?.[0],ps=$('#photo-status');if(!f)return;if(f.size>3*1024*1024){status(ps,'ছবির সাইজ ৩ MB-এর মধ্যে রাখুন।',true);return}const ext=(f.name.split('.').pop()||'jpg').toLowerCase(),path=user.id+'/profile-'+Date.now()+'.'+ext;const {error:upErr}=await db.storage.from('student-photos').upload(path,f,{upsert:true,contentType:f.type});if(upErr){status(ps,'ছবি আপলোড হয়নি। '+upErr.message,true);return}const {data:pub}=db.storage.from('student-photos').getPublicUrl(path);const {error:saveErr}=await db.from('profiles').update({profile_photo_url:pub.publicUrl}).eq('id',user.id);if(saveErr){status(ps,saveErr.message,true);return}$('#student-photo-preview').src=pub.publicUrl;status(ps,'প্রোফাইল ছবি আপডেট হয়েছে।')};
- const {data:siteRows}=await db.from('site_content').select('key,value').in('key',['online_class_url','student_id_reminder']);
- const siteMap=Object.fromEntries((siteRows||[]).map(x=>[x.key,x.value]));
- if(siteMap.student_id_reminder)$('#student-id-reminder').textContent=siteMap.student_id_reminder;
- $('#student-online-class').innerHTML=siteMap.online_class_url?'<a class="btn" href="'+esc(siteMap.online_class_url)+'" target="_blank" rel="noopener">অনলাইন ক্লাসে যোগ দিন</a>':'Admin এখনো অনলাইন ক্লাসের লিংক যোগ করেননি।';
- const {data:ns,error:ne}=await db.from('notices').select('title,body,created_at,student_id').eq('active',true).or('student_id.is.null,student_id.eq.'+(p.student_id||'NONE')).order('created_at',{ascending:false}).limit(30);
- $('#student-notices').innerHTML=ne?'<p>নোটিশ লোড হয়নি।</p>':(ns||[]).map(n=>'<article class="notice-item"><small>'+new Date(n.created_at).toLocaleDateString('bn-BD')+'</small><h3>'+esc(n.title)+'</h3><p>'+esc(n.body)+'</p></article>').join('')||'<p>এখনো কোনো নোটিশ নেই।</p>';
+function renderStudentPortal(student){
+ const box=$('#student-dashboard');
+ if(!box)return;
+ box.classList.remove('hidden');
+ box.innerHTML='<div class="card"><h2>'+esc(student.full_name||'শিক্ষার্থী')+'</h2><p>Student ID: <b>'+esc(student.student_id||'—')+'</b></p><p>কোর্স: '+esc(student.course||'—')+'</p><p>শাখা: '+esc(student.branch||'—')+'</p><p>আবেদনের অবস্থা: <b>'+esc(student.status||'—')+'</b></p><p class="note">এই পোর্টালে প্রবেশের জন্য Student ID এবং ভর্তি আবেদনে দেওয়া মোবাইল নম্বর ব্যবহার করুন।</p><h3>অনলাইন ক্লাস</h3><div id="student-online-class" class="notice-box">লিংক লোড হচ্ছে…</div><h3 style="margin-top:20px">সর্বশেষ নোটিশ</h3><div id="student-notices">নোটিশ লোড হচ্ছে…</div><button class="btn outline" id="student-logout" type="button" style="margin-top:16px">লগআউট</button></div>';
+ $('#student-logout').onclick=()=>{box.classList.add('hidden');box.innerHTML='';lf.reset();status($('#login-status'),'আপনি লগআউট করেছেন।')};
+ (async()=>{
+   const {data:siteRows}=await db.from('site_content').select('key,value').in('key',['online_class_url']);
+   const siteMap=Object.fromEntries((siteRows||[]).map(x=>[x.key,x.value]));
+   const online=$('#student-online-class');
+   if(online)online.innerHTML=siteMap.online_class_url?'<a class="btn" href="'+esc(siteMap.online_class_url)+'" target="_blank" rel="noopener">অনলাইন ক্লাসে যোগ দিন</a>':'Admin এখনো অনলাইন ক্লাসের লিংক যোগ করেননি।';
+   const {data:ns,error:ne}=await db.from('notices').select('title,body,created_at').eq('active',true).order('created_at',{ascending:false}).limit(20);
+   const noticeHost=$('#student-notices');
+   if(noticeHost)noticeHost.innerHTML=ne?'<p>নোটিশ লোড করা যায়নি।</p>':(ns||[]).map(n=>'<article class="notice-item"><small>'+new Date(n.created_at).toLocaleDateString('bn-BD')+'</small><h3>'+esc(n.title)+'</h3><p>'+esc(n.body)+'</p></article>').join('')||'<p>এখনো কোনো নোটিশ নেই।</p>';
+ })();
 }
-if(db)db.auth.getSession().then(({data})=>{if(data.session&&$('#student-login-form'))renderStudentPortal(data.session.user)});
-
 // Only show courses that the admin has added in Supabase. Both pages use the same data.
 async function loadPublicCourses(){
  const hosts=[$('#public-courses'),$('#homepage-courses')].filter(Boolean);
