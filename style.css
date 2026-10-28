@@ -6,3 +6,9 @@
 .public-banner-section{padding:14px 0;background:#f5f7fc}.public-banner-section:has(#public-banners:empty){display:none}#public-banners{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}.site-banner{position:relative;display:block;overflow:hidden;border-radius:16px;border:1px solid var(--line);background:#fff;box-shadow:var(--shadow);min-height:90px}.site-banner img{display:block;width:100%;max-height:260px;object-fit:cover}.site-banner span{display:block;padding:10px 14px;font-weight:700;color:var(--navy)}.admin-table-wrap{overflow:auto}.admin-section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}.admin-section-head h3{margin:0}.admin-section-head p{margin:2px 0 10px}.admin-table select{min-width:100px;padding:7px;border:1px solid #dce3ef;border-radius:7px;background:#fff}.admin-table td,.admin-table th{min-width:100px}.admin-table th{position:sticky;top:0;z-index:1}
 
 .course-card{overflow:hidden;padding:0}.course-card-image{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:#eaf0ff}.course-card-image-placeholder{display:grid;place-items:center;background:linear-gradient(135deg,#101b35,#356dff);color:#fff;font-weight:800;letter-spacing:2px}.course-card-body{padding:20px}.course-detail-image{width:100%;max-height:380px;object-fit:cover;border-radius:14px;margin-bottom:22px}
+
+
+/* Show the complete uploaded banner without cropping any part of the image. */
+#public-banners{grid-template-columns:minmax(0,1fr);}
+.site-banner{height:auto;min-height:0;}
+.site-banner img{width:100%;height:auto;max-height:none;object-fit:contain;object-position:center;background:#f5f7fc;}
