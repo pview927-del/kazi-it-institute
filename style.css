@@ -48,3 +48,11 @@
 .site-banner img{width:100%;height:clamp(130px,28vw,320px);max-height:none;object-fit:contain;border-radius:0;}
 .site-banner span{padding:8px 16px;}
 @media(max-width:720px){.public-banner-section .wrap{padding-left:0;padding-right:0;}.site-banner img{height:clamp(100px,34vw,190px);}}
+
+
+/* True full-bleed banner: image reaches both browser-window edges without cropping. */
+.public-banner-section{display:block;width:100%;margin:0;padding:0;overflow:visible;}
+.public-banner-section .wrap#public-banners{display:block;width:100vw;max-width:none;margin-left:calc(50% - 50vw);margin-right:0;padding:0;}
+#public-banners .site-banner{display:block;width:100%;max-width:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;background:#fff;overflow:hidden;}
+#public-banners .site-banner img{display:block;width:100%;height:auto;max-height:none;object-fit:contain;object-position:center;background:#fff;border-radius:0;}
+#public-banners .site-banner span{display:block;padding:8px 16px;background:#f3f6fc;color:var(--navy);border:0;border-radius:0;font-size:14px;}
