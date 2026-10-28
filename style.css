@@ -89,3 +89,10 @@
 #public-banners .site-banner img{display:block!important;width:100%!important;max-width:300px!important;aspect-ratio:1 / 1!important;height:auto!important;max-height:none!important;object-fit:cover!important;object-position:center!important;border-radius:50%!important;overflow:hidden!important;background:#eef3fa!important;flex:none!important;}
 #public-banners .site-banner span{display:block!important;width:100%!important;margin:12px 0 0!important;padding:0 6px!important;background:transparent!important;color:var(--navy)!important;text-align:center!important;border:0!important;border-radius:0!important;font-size:15px!important;line-height:1.4!important;overflow-wrap:anywhere!important;}
 @media(max-width:600px){.public-banner-section .wrap#public-banners{width:calc(100% - 24px)!important;gap:12px!important;}#public-banners .site-banner img{width:100%!important;max-width:none!important;}#public-banners .site-banner span{font-size:12px!important;margin-top:8px!important;}}
+
+/* OUR APPROACH tiles: independent clickable cards */
+.illustration-box .mini-grid .approach-link{display:flex;flex-direction:column;gap:8px;min-width:0;padding:18px 14px;background:#f3f6fc;border-radius:13px;text-decoration:none;color:var(--navy);transition:transform .18s ease,background .18s ease,box-shadow .18s ease;}
+.illustration-box .mini-grid .approach-link:hover{background:#eaf0ff;transform:translateY(-2px);box-shadow:0 8px 20px #243b7012;}
+.illustration-box .mini-grid .approach-link b{font-size:16px;color:var(--navy);}
+.illustration-box .mini-grid .approach-link span{font-size:14px;color:var(--muted);}
+.illustration-box .mini-grid .approach-link[aria-disabled="true"]{cursor:default;}
