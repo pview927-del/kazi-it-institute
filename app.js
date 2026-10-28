@@ -226,7 +226,7 @@ const iconPaths={
  check:'<circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/>',
  arrow:'<path d="M7 17 17 7M7 7h10v10"/>'
 };
-const svgIcon=(name,cls='graphic-icon')=>'<svg class="'+cls+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(iconPaths[name]||iconPaths.sparkles)+'</svg>';
+const svgIcon=(name,cls='graphic-icon')=>'<svg class="'+cls+'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(iconPaths[name]||iconPaths.sparkles)+'</svg>';
 const emojiIconName=ch=>{const n=ch.codePointAt(0);if(n>=0x1F4DA&&n<=0x1F4F0)return 'book';if(n>=0x1F4BB&&n<=0x1F4EF)return 'monitor';if(n>=0x1F3A8&&n<=0x1F3AD)return 'palette';if(n>=0x1F30D&&n<=0x1F320)return 'globe';if(n>=0x1F465&&n<=0x1F487)return 'users';if(n>=0x1F514&&n<=0x1F51B)return 'bell';if(n>=0x1F4CD&&n<=0x1F4CE)return 'pin';if(n>=0x1F4C4&&n<=0x1F4C8)return 'file';if(n>=0x1F680&&n<=0x1F6FF)return 'arrow';return 'sparkles'};
 function replaceEmojiWithIcons(root=document.body){
  if(!root)return;
@@ -236,6 +236,7 @@ function replaceEmojiWithIcons(root=document.body){
  nodes.forEach(node=>{const text=node.nodeValue;const frag=document.createDocumentFragment();let last=0,m;re.lastIndex=0;while((m=re.exec(text))){frag.append(document.createTextNode(text.slice(last,m.index)));const holder=document.createElement('span');holder.innerHTML=svgIcon(emojiIconName(m[0]));frag.append(holder.firstChild);last=m.index+m[0].length}frag.append(document.createTextNode(text.slice(last)));node.replaceWith(frag)});
 }
 function setupGraphicIcons(){
+ if(!document.getElementById('kazi-graphic-icon-style')){const st=document.createElement('style');st.id='kazi-graphic-icon-style';st.textContent='.graphic-icon{display:inline-block;width:1.12em;height:1.12em;vertical-align:-.18em;flex:none;color:currentColor}button.menu .graphic-icon{width:22px;height:22px;vertical-align:middle}.check{display:flex;align-items:center;gap:9px}.check-graphic-icon{width:18px;height:18px;color:var(--blue,#356dff)}';document.head.appendChild(st)}
  const menuButton=document.querySelector('#menu');
  if(menuButton&&menuButton.textContent.trim()==='☰'){menuButton.textContent='';menuButton.insertAdjacentHTML('afterbegin',svgIcon('menu'))}
  replaceEmojiWithIcons();
