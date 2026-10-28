@@ -1,0 +1,19 @@
+{
+  "name": "KAZI IT Student App",
+  "short_name": "KAZI Student",
+  "description": "KAZI IT AND INSTITUTE student portal and notifications",
+  "start_url": "./student-login.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f6f8fc",
+  "theme_color": "#101b35",
+  "icons": [
+    {
+      "src": "app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
