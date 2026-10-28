@@ -19,14 +19,17 @@ const af=$('#application-form');if(af)af.onsubmit=async e=>{
  if(!db){status(st,'আবেদন জমা দিতে Supabase সংযোগ প্রয়োজন। WhatsApp-এ যোগাযোগ করুন।',true);return}
  const submit=af.querySelector('[type=submit]');if(submit){submit.disabled=true;submit.textContent='জমা হচ্ছে…'}
  try{
-   const {data:signup,error:signErr}=await db.auth.signUp({email:d.email,password:d.password,options:{data:{full_name:d.full_name,phone:d.phone}}});
+   const {data:signup,error:signErr}=await db.auth.signUp({email:d.email,password:d.password,options:{data:{full_name:d.full_name,phone:d.phone,father_name:d.father_name,mother_name:d.mother_name,course:d.course,branch:d.branch}}});
    if(signErr)throw signErr;
    const userId=signup.user?.id||null;
-   const {data:app,error:appErr}=await db.from('applications').insert([{
-    full_name:d.full_name,phone:d.phone,age:Number(d.age),gender:d.gender,occupation:d.occupation,address:d.address,
-    course:d.course,branch:d.branch,father_name:d.father_name,mother_name:d.mother_name,status:'approved',profile_id:userId
-   }]).select('student_id').single();
+   const {data:appRows,error:appErr}=await db.rpc('submit_kazi_application',{
+    p_full_name:d.full_name,p_phone:d.phone,p_father_name:d.father_name,p_mother_name:d.mother_name,
+    p_email:d.email,p_occupation:d.occupation,p_age:Number(d.age),p_gender:d.gender,p_address:d.address,
+    p_course:d.course,p_branch:d.branch
+   });
    if(appErr)throw appErr;
+   const app={student_id:appRows?.[0]?.student_id};
+   if(!app.student_id)throw new Error('Student ID তৈরি হয়নি। Supabase SQL upgrade চালানো হয়েছে কি না যাচাই করুন।');
    if(signup.session&&userId){
     await db.from('profiles').update({full_name:d.full_name,phone:d.phone,father_name:d.father_name,mother_name:d.mother_name,course:d.course,branch:d.branch,student_id:app.student_id}).eq('id',userId);
    }
@@ -62,7 +65,7 @@ async function renderStudentPortal(user){
 if(db)db.auth.getSession().then(({data})=>{if(data.session&&$('#student-login-form'))renderStudentPortal(data.session.user)});
 
 // Render database-managed courses on the public courses page while keeping existing course pages intact.
-async function loadPublicCourses(){const host=$('#public-courses');if(!host||!db)return;const {data,error}=await db.from('courses').select('*').eq('active',true).order('created_at',{ascending:false});if(error||!data?.length)return;host.innerHTML=data.map(c=>'<article class="course-card"><div class="course-icon">▤</div><h3>'+esc(c.title_bn||c.title)+'</h3><p>'+esc(c.description||'কোর্সের বিস্তারিত জানতে যোগাযোগ করুন।')+'</p><div class="tags"><span class="tag">'+esc(c.fee)+'</span><span class="tag">'+esc(c.duration)+'</span></div><p class="small">'+esc(c.conditions||'')+'</p><a class="link" href="apply.html?course='+encodeURIComponent(c.slug)+'">এই কোর্সে ভর্তি →</a></article>').join('')}
+async function loadPublicCourses(){const host=$('#public-courses');if(!host||!db)return;const {data,error}=await db.from('courses').select('*').eq('active',true).order('created_at',{ascending:false});if(error||!data?.length)return;host.insertAdjacentHTML('beforeend',data.map(c=>'<article class="course-card"><div class="course-icon">▤</div><h3>'+esc(c.title_bn||c.title)+'</h3><p>'+esc(c.description||'কোর্সের বিস্তারিত জানতে যোগাযোগ করুন।')+'</p><div class="tags"><span class="tag">'+esc(c.fee)+'</span><span class="tag">'+esc(c.duration)+'</span></div><p class="small">'+esc(c.conditions||'')+'</p><a class="link" href="apply.html?course='+encodeURIComponent(c.slug)+'">এই কোর্সে ভর্তি →</a></article>').join(''))}
 loadPublicCourses();
 
 // Public banner carousel; target_url is the click-through destination.
