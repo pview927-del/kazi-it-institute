@@ -125,3 +125,39 @@ grant select on public.profiles to authenticated;
 -- 3) Run this SQL with the real UUID:
 -- insert into public.profiles (id, role) values ('PASTE_AUTH_USER_UUID_HERE', 'admin')
 -- on conflict (id) do update set role = 'admin';
+
+
+-- ADMIN SECOND-FACTOR CODE (run this after the schema above)
+-- The code hash is stored server-side and is not readable by website visitors.
+create table if not exists public.admin_security_settings (
+  id integer primary key check (id = 1),
+  code_hash text not null
+);
+alter table public.admin_security_settings enable row level security;
+revoke all on public.admin_security_settings from anon, authenticated;
+grant select, insert, update, delete on public.admin_security_settings to service_role;
+
+create or replace function public.verify_kazi_admin_code(p_code text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare saved_hash text;
+begin
+  if auth.uid() is null then return false; end if;
+  if not public.is_kazi_admin() then return false; end if;
+  select code_hash into saved_hash from public.admin_security_settings where id = 1;
+  if saved_hash is null or p_code is null then return false; end if;
+  return crypt(p_code, saved_hash) = saved_hash;
+end;
+$$;
+revoke all on function public.verify_kazi_admin_code(text) from public, anon;
+grant execute on function public.verify_kazi_admin_code(text) to authenticated;
+
+-- IMPORTANT: Set your new private code directly in Supabase SQL Editor.
+-- Do NOT commit your real code to GitHub. Replace NEW_PRIVATE_CODE with a NEW code
+-- (not a code you have posted in a chat or public place), run this privately:
+-- insert into public.admin_security_settings (id, code_hash)
+-- values (1, crypt('NEW_PRIVATE_CODE', gen_salt('bf')))
+-- on conflict (id) do update set code_hash = excluded.code_hash;
