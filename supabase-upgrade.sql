@@ -185,3 +185,14 @@ end;
 $$;
 revoke all on function public.submit_kazi_application(text,text,text,text,text,text,integer,text,text,text,text) from public;
 grant execute on function public.submit_kazi_application(text,text,text,text,text,text,integer,text,text,text,text) to anon,authenticated;
+
+-- Tighten notice visibility: public visitors see only general notices; students see only their own plus general notices.
+drop policy if exists "public reads active notices" on public.notices;
+drop policy if exists "students read own notices" on public.notices;
+create policy "public reads general notices" on public.notices
+for select to anon using (active=true and student_id is null);
+create policy "students read general and own notices" on public.notices
+for select to authenticated using (
+  (active=true and (student_id is null or student_id=(select p.student_id from public.profiles p where p.id=auth.uid())))
+  or public.is_kazi_admin()
+);
