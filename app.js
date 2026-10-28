@@ -191,14 +191,18 @@ $('#online-class-form')?.addEventListener('submit',async e=>{e.preventDefault();
 $('#make-admin-qr')?.addEventListener('click',()=>{const id=$('#qr-student-id')?.value?.trim(),host=$('#admin-qr-result');if(!host)return;if(!id){host.textContent='Student ID লিখুন।';return}host.innerHTML='<div id="admin-qr-canvas"></div><p>'+esc(id)+'</p><button class="btn outline" id="download-admin-qr" type="button">QR ডাউনলোড</button>';new QRCode(host.querySelector('#admin-qr-canvas'),{text:id,width:220,height:220});host.querySelector('#download-admin-qr').onclick=()=>{const im=host.querySelector('img'),cv=host.querySelector('canvas'),url=im?.src||cv?.toDataURL();if(url){const link=document.createElement('a');link.href=url;link.download='student-id-qr.png';link.click()}}});
 async function loadApproachEditor(){
  const host=$('#approach-content-fields');if(!host)return;
- if(!db){host.innerHTML='<p class="status error">Supabase সংযোগ পাওয়া যায়নি। config.js পরীক্ষা করুন।</p>';return}
- const {data,error}=await db.from('site_content').select('key,value');
- if(error){host.innerHTML='<p class="status error">বাটনের তথ্য লোড হয়নি: '+esc(error.message)+'</p>';return}
- const values=Object.fromEntries((data||[]).map(x=>[x.key,x.value]));
- host.innerHTML=[1,2,3,4].map(i=>{
-  const defaults={1:['Clear Lessons','সহজ ব্যাখ্যা'],2:['Practical Tasks','বাস্তব অনুশীলন'],3:['Skill Development','দক্ষতা উন্নয়ন'],4:['Guided Learning','ধাপে ধাপে শেখা']}[i];
-  return '<div class="field full" style="padding:14px;background:#f5f7fc;border-radius:12px"><h4 style="margin:0 0 10px">বাটন '+i+'</h4><div class="fields"><label class="field"><span>ইংরেজি শিরোনাম</span><input name="approach_'+i+'_title" required value="'+esc(values['approach_'+i+'_title']||defaults[0])+'"></label><label class="field"><span>বাংলা বর্ণনা</span><input name="approach_'+i+'_desc" required value="'+esc(values['approach_'+i+'_desc']||defaults[1])+'"></label><label class="field full"><span>লিংক (যেমন about.html বা https://example.com)</span><input name="approach_'+i+'_url" type="text" placeholder="about.html অথবা https://..." value="'+esc(values['approach_'+i+'_url']||'')+'"></label></div></div>';
- }).join('');
+ const defaults={1:['Clear Lessons','সহজ ব্যাখ্যা'],2:['Practical Tasks','বাস্তব অনুশীলন'],3:['Skill Development','দক্ষতা উন্নয়ন'],4:['Guided Learning','ধাপে ধাপে শেখা']};
+ const render=(values={})=>{host.innerHTML=[1,2,3,4].map(i=>'<div class="field full" style="padding:14px;background:#f5f7fc;border:1px solid #e3e9f5;border-radius:12px;margin-bottom:12px"><h4 style="margin:0 0 10px">বাটন '+i+'</h4><div class="fields"><label class="field"><span>ইংরেজি শিরোনাম</span><input name="approach_'+i+'_title" required value="'+esc(values['approach_'+i+'_title']||defaults[i][0])+'"></label><label class="field"><span>বাংলা বর্ণনা</span><input name="approach_'+i+'_desc" required value="'+esc(values['approach_'+i+'_desc']||defaults[i][1])+'"></label><label class="field full"><span>লিংক (যেমন about.html বা https://example.com)</span><input name="approach_'+i+'_url" type="text" placeholder="about.html অথবা https://..." value="'+esc(values['approach_'+i+'_url']||'')+'"></label></div></div>').join('');};
+ render();
+ if(!db){host.insertAdjacentHTML('afterbegin','<p class="status error">Supabase সংযোগ নেই। config.js পরীক্ষা করুন।</p>');return;}
+ try{
+  const {data,error}=await db.from('site_content').select('key,value');
+  if(error)throw error;
+  render(Object.fromEntries((data||[]).map(x=>[x.key,x.value])));
+ }catch(err){
+  console.error('OUR APPROACH editor load failed:',err);
+  const st=$('#admin-panel-status');if(st)status(st,'পুরোনো লেখা লোড হয়নি: '+(err?.message||'Supabase error')+'. ঘরগুলো দেখা যাচ্ছে; Save করে চেষ্টা করুন।',true);
+ }
 }
 $('#approach-content-form')?.addEventListener('submit',async e=>{
  e.preventDefault();const st=$('#admin-panel-status'),btn=e.submitter;
