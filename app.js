@@ -81,10 +81,17 @@ function renderStudentPortal(student,studentId,phone){
  });
  $('#student-logout').onclick=()=>{localStorage.removeItem('kazi_student_login');box.classList.add('hidden');box.innerHTML='';if(lf){lf.reset();lf.classList.remove('hidden')}status($('#login-status'),'আপনি লগআউট করেছেন।')};
  (async()=>{
-   const {data:siteRows}=await db.from('site_content').select('key,value').in('key',['online_class_url']);
-   const siteMap=Object.fromEntries((siteRows||[]).map(x=>[x.key,x.value]));
    const online=$('#student-online-class');
-   if(online)online.innerHTML=siteMap.online_class_url?'<a class="btn" href="'+esc(siteMap.online_class_url)+'" target="_blank" rel="noopener">অনলাইন ক্লাসে যোগ দিন</a>':'Admin এখনো অনলাইন ক্লাসের লিংক যোগ করেননি।';
+   const enrolledStatus=String(student.status||'').toLowerCase();
+   const isEnrolled=['approved','active','enrolled','approved_student'].includes(enrolledStatus);
+   if(online){
+    if(!isEnrolled){online.innerHTML='<p>অনলাইন ক্লাসের সুবিধা পেতে আগে ভর্তি আবেদন অনুমোদিত হতে হবে।</p>';}
+    else{
+     const {data:siteRows}=await db.from('site_content').select('key,value').in('key',['online_class_url']);
+     const siteMap=Object.fromEntries((siteRows||[]).map(x=>[x.key,x.value]));
+     online.innerHTML=siteMap.online_class_url?'<a class="btn" href="'+esc(siteMap.online_class_url)+'" target="_blank" rel="noopener">অনলাইন ক্লাসে যোগ দিন</a>':'Admin এখনো অনলাইন ক্লাসের লিংক যোগ করেননি।';
+    }
+   }
    const {data:ns,error:ne}=await db.from('notices').select('title,body,created_at').eq('active',true).order('created_at',{ascending:false}).limit(20);
    const noticeHost=$('#student-notices');
    if(noticeHost)noticeHost.innerHTML=ne?'<p>নোটিশ লোড করা যায়নি।</p>':(ns||[]).map(n=>'<article class="notice-item"><small>'+new Date(n.created_at).toLocaleDateString('bn-BD')+'</small><h3>'+esc(n.title)+'</h3><p>'+esc(n.body)+'</p></article>').join('')||'<p>এখনো কোনো নোটিশ নেই।</p>';
