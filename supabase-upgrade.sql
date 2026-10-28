@@ -11,6 +11,7 @@ alter table public.profiles
   add column if not exists course text,
   add column if not exists branch text,
   add column if not exists profile_photo_url text,
+  add column if not exists created_at timestamptz not null default now(),
   add column if not exists joined_at timestamptz not null default now();
 
 alter table public.applications
@@ -39,8 +40,8 @@ create or replace function public.kazi_assign_application_id()
 returns trigger language plpgsql security definer set search_path=public as $$
 begin
   if new.student_id is null or trim(new.student_id)='' then
-    if auth.uid() is not null then
-      select p.student_id into new.student_id from public.profiles p where p.id=auth.uid();
+    if coalesce(auth.uid(), new.profile_id) is not null then
+      select p.student_id into new.student_id from public.profiles p where p.id=coalesce(auth.uid(), new.profile_id);
     end if;
     if new.student_id is null or trim(new.student_id)='' then
       new.student_id := public.kazi_new_student_id();
@@ -57,12 +58,16 @@ for each row execute function public.kazi_assign_application_id();
 create or replace function public.kazi_create_profile_for_auth_user()
 returns trigger language plpgsql security definer set search_path=public as $$
 begin
-  insert into public.profiles(id, role, full_name, phone, student_id, joined_at)
+  insert into public.profiles(id, role, full_name, phone, father_name, mother_name, course, branch, student_id, joined_at)
   values (
     new.id,
     'student',
     coalesce(new.raw_user_meta_data->>'full_name',''),
     coalesce(new.raw_user_meta_data->>'phone',''),
+    coalesce(new.raw_user_meta_data->>'father_name',''),
+    coalesce(new.raw_user_meta_data->>'mother_name',''),
+    coalesce(new.raw_user_meta_data->>'course',''),
+    coalesce(new.raw_user_meta_data->>'branch',''),
     public.kazi_new_student_id(),
     now()
   )
@@ -123,3 +128,22 @@ drop policy if exists "admins delete site banners" on storage.objects;
 create policy "admins delete site banners" on storage.objects for delete to authenticated using (bucket_id='site-banners' and public.is_kazi_admin());
 
 -- Allow public application submissions and admin edits already governed by the original policies.
+
+-- Student profile photo storage. Bucket is public for profile image display; only the owner can upload/update/delete their own files.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('student-photos','student-photos',true,3145728,array['image/jpeg','image/png','image/webp'])
+on conflict (id) do update set public=true, file_size_limit=3145728, allowed_mime_types=array['image/jpeg','image/png','image/webp'];
+drop policy if exists "public can view student photos" on storage.objects;
+create policy "public can view student photos" on storage.objects for select using (bucket_id='student-photos');
+drop policy if exists "students upload own profile photo" on storage.objects;
+create policy "students upload own profile photo" on storage.objects for insert to authenticated with check (bucket_id='student-photos' and (storage.foldername(name))[1]=auth.uid()::text);
+drop policy if exists "students update own profile photo" on storage.objects;
+create policy "students update own profile photo" on storage.objects for update to authenticated using (bucket_id='student-photos' and (storage.foldername(name))[1]=auth.uid()::text) with check (bucket_id='student-photos' and (storage.foldername(name))[1]=auth.uid()::text);
+drop policy if exists "students delete own profile photo" on storage.objects;
+create policy "students delete own profile photo" on storage.objects for delete to authenticated using (bucket_id='student-photos' and (storage.foldername(name))[1]=auth.uid()::text);
+
+grant select on public.banners to anon, authenticated;
+grant insert, update, delete on public.banners to authenticated;
+grant select, insert, update, delete on public.profiles to authenticated;
+grant select, insert, update, delete on public.applications to authenticated;
+grant select, insert, update, delete on public.notices, public.courses to authenticated;
