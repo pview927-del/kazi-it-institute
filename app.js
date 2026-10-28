@@ -13,34 +13,27 @@ $$('[data-whatsapp]').forEach(a=>a.href='https://wa.me/'+wa);
 $$('[data-course]').forEach(a=>a.addEventListener('click',()=>{const s=$('#course');if(s)s.value=a.dataset.course}));
 const ef=$('#enquiry-form');if(ef)ef.onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(ef));window.open('https://wa.me/'+wa+'?text='+encodeURIComponent('KAZI IT AND INSTITUTE\n'+Object.entries(d).map(x=>x[0]+': '+x[1]).join('\n')),'_blank','noopener')};
 
-// Online application: student account + guardian details + auto Student ID from database trigger.
+// Online application: no email/password account is required; Student ID is created by the database.
 const af=$('#application-form');if(af)af.onsubmit=async e=>{
  e.preventDefault();const d=Object.fromEntries(new FormData(af)),st=$('#form-status');
  if(!db){status(st,'আবেদন জমা দিতে Supabase সংযোগ প্রয়োজন। WhatsApp-এ যোগাযোগ করুন।',true);return}
  const submit=af.querySelector('[type=submit]');if(submit){submit.disabled=true;submit.textContent='জমা হচ্ছে…'}
  try{
-   const {data:signup,error:signErr}=await db.auth.signUp({email:d.email,password:d.password,options:{data:{full_name:d.full_name,phone:d.phone,father_name:d.father_name,mother_name:d.mother_name,course:d.course,branch:d.branch}}});
-   if(signErr)throw signErr;
-   const userId=signup.user?.id||null;
    const {data:appRows,error:appErr}=await db.rpc('submit_kazi_application',{
     p_full_name:d.full_name,p_phone:d.phone,p_father_name:d.father_name,p_mother_name:d.mother_name,
-    p_email:d.email,p_occupation:d.occupation,p_age:Number(d.age),p_gender:d.gender,p_address:d.address,
+    p_email:'',p_occupation:d.occupation,p_age:Number(d.age),p_gender:d.gender,p_address:d.address,
     p_course:d.course,p_branch:d.branch
    });
    if(appErr)throw appErr;
    const app={student_id:appRows?.[0]?.student_id};
-   if(!app.student_id)throw new Error('Student ID তৈরি হয়নি। Supabase SQL upgrade চালানো হয়েছে কি না যাচাই করুন।');
-   if(signup.session&&userId){
-    await db.from('profiles').update({full_name:d.full_name,phone:d.phone,father_name:d.father_name,mother_name:d.mother_name,course:d.course,branch:d.branch,student_id:app.student_id}).eq('id',userId);
-   }
-   const msg=signup.session
-    ? 'অভিনন্দন! আবেদন ও Student account তৈরি হয়েছে। আপনার Student ID: '+app.student_id+'। এটি কপি করে রাখুন। এখন Student Login-এ একই ইমেইল ও পাসওয়ার্ড দিয়ে ঢুকতে পারবেন।'
-    : 'আবেদন জমা হয়েছে! আপনার Student ID: '+app.student_id+'। ইমেইলে account confirmation চাইলে আগে ইমেইল confirm করুন। এরপর Student Login-এ ঢুকুন। Student ID কপি করে রাখুন।';
-   status(st,msg);let out=$('#generated-student-id');if(!out){out=document.createElement('div');out.id='generated-student-id';out.className='card';st.after(out)}out.innerHTML='<h3>আপনার Student ID</h3><p style="font-size:24px;font-weight:800;color:#356dff">'+esc(app.student_id)+'</p><button class="btn" type="button" id="copy-student-id">Student ID কপি করুন</button>';$('#copy-student-id').onclick=()=>navigator.clipboard.writeText(app.student_id);
+   if(!app.student_id)throw new Error('Student ID তৈরি হয়নি। Supabase SQL function ও database setup যাচাই করুন।');
+   status(st,'আবেদন সফলভাবে জমা হয়েছে! আপনার Student ID: '+app.student_id+'। Student ID কপি করে রাখুন। Student Portal-এ Student ID ও আবেদনপত্রে দেওয়া মোবাইল নম্বর দিয়ে প্রবেশ করুন।');
+   let out=$('#generated-student-id');if(!out){out=document.createElement('div');out.id='generated-student-id';out.className='card';st.after(out)}
+   out.innerHTML='<h3>আপনার Student ID</h3><p style="font-size:24px;font-weight:800;color:#356dff">'+esc(app.student_id)+'</p><button class="btn" type="button" id="copy-student-id">Student ID কপি করুন</button> <a class="btn outline" href="student-login.html">Student Portal খুলুন</a>';
+   $('#copy-student-id').onclick=()=>navigator.clipboard.writeText(app.student_id);
    af.reset();
-   location.href='student-profile.html?id='+encodeURIComponent(app.student_id);
  }catch(err){status(st,'আবেদন সম্পন্ন হয়নি: '+(err.message||'আবার চেষ্টা করুন'),true)}
- finally{if(submit){submit.disabled=false;submit.textContent='আবেদন জমা দিন'}}
+ finally{if(submit){submit.disabled=false;submit.textContent='আবেদন জমা দিন ও Student ID তৈরি করুন'}}
 };
 
 // Student portal: Student ID + registered phone. Photo is stored as a bounded data URL in the student's application row.
