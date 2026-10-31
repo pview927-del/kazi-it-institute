@@ -134,14 +134,18 @@ const login=$('#admin-login-form');if(login){
  login.addEventListener('submit',async e=>{
   e.preventDefault();const btn=login.querySelector('[type="submit"]');
   if(!db){status(st,'Supabase সংযোগ তৈরি হয়নি। পেজ রিফ্রেশ করুন; config.js ও Supabase CDN যাচাই করতে হবে।',true);return}
-  const email=$('#admin-email')?.value?.trim(),password=$('#admin-password')?.value;
-  if(!email||!password){status(st,'অ্যাডমিন ইমেইল ও পাসওয়ার্ড লিখুন।',true);return}
-  if(btn){btn.disabled=true;btn.textContent='লগইন হচ্ছে…'}
+  const username=$('#admin-username')?.value?.trim(),code=$('#admin-code')?.value?.trim();
+  if(!username||!code){status(st,'Admin Username ও Code লিখুন।',true);return}
+  if(btn){btn.disabled=true;btn.textContent='পরিচয় যাচাই হচ্ছে…'}
   try{
-   const {data,error}=await db.auth.signInWithPassword({email,password});if(error)throw error;
+   const {data:verify,error:ve}=await db.functions.invoke('kazi-admin-login',{body:{username,code}});
+   if(ve)throw ve;
+   if(!verify?.success||!verify?.token_hash)throw new Error(verify?.message||'সার্ভার থেকে নিরাপদ লগইন সেশন পাওয়া যায়নি।');
+   const {data,error}=await db.auth.verifyOtp({token_hash:verify.token_hash,type:'magiclink'});
+   if(error)throw error;
    const {data:prof,error:pe}=await db.from('profiles').select('role').eq('id',data.user.id).single();
    if(pe)throw new Error('লগইন হয়েছে, কিন্তু Admin অনুমতি যাচাই করা যায়নি: '+pe.message);
-   if(prof?.role!=='admin'){await db.auth.signOut();throw new Error('এই অ্যাকাউন্টে Admin permission নেই। Supabase profiles টেবিলে role = admin সেট করতে হবে।')}
+   if(prof?.role!=='admin'){await db.auth.signOut();throw new Error('এই অ্যাকাউন্টে Admin permission নেই।')}
    area.classList.add('hidden');panel.classList.remove('hidden');st=$('#admin-panel-status');await loadAdmin();
   }catch(err){status(st,'Admin Login ব্যর্থ: '+(err?.message||'অজানা সমস্যা'),true)}
   finally{if(btn){btn.disabled=false;btn.textContent='নিরাপদে লগইন করুন'}}
