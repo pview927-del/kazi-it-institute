@@ -1,7 +1,7 @@
 (()=> {
 const C=window.KAZI_CONFIG||{},$=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const ready=C.SUPABASE_URL&&C.SUPABASE_ANON_KEY&&window.supabase;
-const db=ready?window.supabase.createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY):null;
+const db=ready?window.supabase.createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage}}):null;
 const wa=C.WHATSAPP_NUMBER||'8801701090350';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function status(el,msg,err=false){if(!el)return;el.textContent=msg;el.classList.remove('hidden','error');if(err)el.classList.add('error')}
